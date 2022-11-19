@@ -5,7 +5,7 @@
 //    is regenerated
 // </auto-generated>
 // ------------------------------------------------------------------------------
-namespace github.events
+namespace Events
 {
 	using System;
 	using System.Collections.Generic;
@@ -19,7 +19,7 @@ namespace github.events
 	[global::System.CodeDom.Compiler.GeneratedCodeAttribute("avrogen", "1.11.1")]
 	public partial class PullRequestOpened : global::Avro.Specific.ISpecificRecord
 	{
-		public static global::Avro.Schema _SCHEMA = global::Avro.Schema.Parse(@"{""type"":""record"",""name"":""PullRequestOpened"",""doc"":""The event of a pull request being opened."",""namespace"":""github.events"",""fields"":[{""name"":""id"",""type"":""long""},{""name"":""url"",""type"":""string""},{""name"":""title"",""type"":""string""},{""name"":""author"",""type"":""string""},{""name"":""opened_on"",""type"":""string""}]}");
+		public static global::Avro.Schema _SCHEMA = global::Avro.Schema.Parse(@"{""type"":""record"",""name"":""PullRequestOpened"",""doc"":""The event of a pull request being opened."",""namespace"":""Events"",""fields"":[{""name"":""id"",""type"":""long""},{""name"":""url"",""type"":""string""},{""name"":""title"",""type"":""string""},{""name"":""author"",""type"":""string""},{""name"":""opened_on"",""type"":""string""}]}");
 		private long _id;
 		private string _url;
 		private string _title;
