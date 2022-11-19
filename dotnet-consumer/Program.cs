@@ -15,9 +15,9 @@ namespace Example.Consumer
     {
         static async Task Main(string[] args)
         {
-
             Console.WriteLine("dotnet consumer starting up");
 
+            Console.WriteLine("Ensuring topics exist in Kafka");
             await EnsureTopics();
 
             var consumerConfig = new ConsumerConfig
@@ -42,7 +42,7 @@ namespace Example.Consumer
                         .Build())
                 {
                     Console.WriteLine("Subscribing to topic");
-                    
+
                     consumer.Subscribe("pullrequests");
 
                     Console.WriteLine("Starting consume loop");
@@ -68,6 +68,8 @@ namespace Example.Consumer
                     }
                 }
             });
+
+            cts.Cancel();
         }
 
         private static async Task EnsureTopics()
