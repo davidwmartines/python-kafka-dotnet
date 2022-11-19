@@ -1,5 +1,11 @@
 ﻿using System;
+using System.Threading;
 using System.Threading.Tasks;
+using Confluent.Kafka;
+using Confluent.Kafka.Admin;
+using Confluent.Kafka.SyncOverAsync;
+using Confluent.SchemaRegistry;
+using Confluent.SchemaRegistry.Serdes;
 using Events;
 
 
@@ -12,22 +18,72 @@ namespace Example.Consumer
 
             Console.WriteLine("dotnet consumer starting up");
 
-            Console.WriteLine(Environment.GetEnvironmentVariable("SCHEMA_REGISTRY_URL"));
+            await EnsureTopics();
 
-            Console.WriteLine(Environment.GetEnvironmentVariable("BOOTSTRAP_SERVERS"));
-
-
-            var e = new PullRequestOpened();
-
-            var counter = 0;
-            var max = args.Length != 0 ? Convert.ToInt32(args[0]) : -1;
-            while (max == -1 || counter < max)
+            var consumerConfig = new ConsumerConfig
             {
-                Console.WriteLine($"Counter: {++counter}");
-                await Task.Delay(TimeSpan.FromMilliseconds(1_000));
+                BootstrapServers = Environment.GetEnvironmentVariable("BOOTSTRAP_SERVERS"),
+                GroupId = Environment.GetEnvironmentVariable("CONSUMER_GROUP_ID")
+            };
+            var schemaRegistryConfig = new SchemaRegistryConfig
+            {
+                Url = Environment.GetEnvironmentVariable("SCHEMA_REGISTRY_URL")
+            };
+
+            CancellationTokenSource cts = new CancellationTokenSource();
+
+            await Task.Run(() =>
+            {
+                using (var schemaRegistry = new CachedSchemaRegistryClient(schemaRegistryConfig))
+                using (var consumer =
+                    new ConsumerBuilder<string, PullRequestOpened>(consumerConfig)
+                        .SetValueDeserializer(new AvroDeserializer<PullRequestOpened>(schemaRegistry).AsSyncOverAsync())
+                        .SetErrorHandler((_, e) => Console.WriteLine($"Error: {e.Reason}"))
+                        .Build())
+                {
+                    Console.WriteLine("Subscribing to topic");
+                    
+                    consumer.Subscribe("pullrequests");
+
+                    Console.WriteLine("Starting consume loop");
+                    try
+                    {
+                        while (true)
+                        {
+                            try
+                            {
+                                var consumeResult = consumer.Consume(cts.Token);
+                                var pullRequestOpened = consumeResult.Message.Value;
+                                Console.WriteLine($"key: {consumeResult.Message.Key}, {pullRequestOpened.id}");
+                            }
+                            catch (ConsumeException e)
+                            {
+                                Console.WriteLine($"Consume error: {e.Error.Reason}");
+                            }
+                        }
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        consumer.Close();
+                    }
+                }
+            });
+        }
+
+        private static async Task EnsureTopics()
+        {
+            using (var adminClient = new AdminClientBuilder(new AdminClientConfig { BootstrapServers = Environment.GetEnvironmentVariable("BOOTSTRAP_SERVERS") }).Build())
+            {
+                try
+                {
+                    await adminClient.CreateTopicsAsync(new TopicSpecification[] {
+                        new TopicSpecification { Name = "pullrequests", ReplicationFactor = 1, NumPartitions = 1 } });
+                }
+                catch (CreateTopicsException e)
+                {
+                    Console.WriteLine($"An error occurred creating topic {e.Results[0].Topic}: {e.Results[0].Error.Reason}");
+                }
             }
-
-
         }
 
     }

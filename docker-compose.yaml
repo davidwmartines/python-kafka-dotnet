@@ -38,3 +38,5 @@ services:
     build: ./dotnet-consumer
     env_file:
       - ./dotnet-consumer/.env
+    depends_on:
+      - schema-registry
