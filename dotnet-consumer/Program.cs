@@ -36,8 +36,8 @@ namespace Example.Consumer
             {
                 using (var schemaRegistry = new CachedSchemaRegistryClient(schemaRegistryConfig))
                 using (var consumer =
-                    new ConsumerBuilder<string, PullRequestOpened>(consumerConfig)
-                        .SetValueDeserializer(new AvroDeserializer<PullRequestOpened>(schemaRegistry).AsSyncOverAsync())
+                    new ConsumerBuilder<string, PullRequest>(consumerConfig)
+                        .SetValueDeserializer(new AvroDeserializer<PullRequest>(schemaRegistry).AsSyncOverAsync())
                         .SetErrorHandler((_, e) => Console.WriteLine($"Error: {e.Reason}"))
                         .Build())
                 {
