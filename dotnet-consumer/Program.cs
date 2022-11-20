@@ -6,7 +6,7 @@ using Confluent.Kafka.Admin;
 using Confluent.Kafka.SyncOverAsync;
 using Confluent.SchemaRegistry;
 using Confluent.SchemaRegistry.Serdes;
-using Events;
+using github.events;
 
 
 namespace Example.Consumer
@@ -59,6 +59,7 @@ namespace Example.Consumer
                             catch (ConsumeException e)
                             {
                                 Console.WriteLine($"Consume error: {e.Error.Reason}");
+                                throw e;
                             }
                         }
                     }

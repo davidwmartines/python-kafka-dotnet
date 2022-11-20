@@ -34,9 +34,18 @@ services:
       SCHEMA_REGISTRY_LISTENERS: http://0.0.0.0:8081
       SCHEMA_REGISTRY_SCHEMA_COMPATIBILITY_LEVEL: full
 
+  python-producer:
+    build: ./python-producer
+    env_file:
+      - ./python-producer/.env
+    depends_on:
+      - schema-registry
+    restart: always
+
   dotnet-consumer:
     build: ./dotnet-consumer
     env_file:
       - ./dotnet-consumer/.env
     depends_on:
       - schema-registry
+    restart: always

@@ -5,7 +5,7 @@
 //    is regenerated
 // </auto-generated>
 // ------------------------------------------------------------------------------
-namespace Events
+namespace github.events
 {
 	using System;
 	using System.Collections.Generic;
@@ -19,7 +19,7 @@ namespace Events
 	[global::System.CodeDom.Compiler.GeneratedCodeAttribute("avrogen", "1.11.1")]
 	public partial class PullRequest : global::Avro.Specific.ISpecificRecord
 	{
-		public static global::Avro.Schema _SCHEMA = global::Avro.Schema.Parse(@"{""type"":""record"",""name"":""PullRequest"",""doc"":""Represents the state of a Pull Request."",""namespace"":""Events"",""fields"":[{""name"":""id"",""type"":""long""},{""name"":""url"",""type"":""string""},{""name"":""title"",""type"":""string""},{""name"":""author"",""type"":""string""},{""name"":""opened_on"",""type"":{""type"":""long"",""logicalType"":""timestamp-millis""}},{""name"":""closed_on"",""default"":""null"",""type"":[""null"",{""type"":""long"",""logicalType"":""timestamp-millis""}]}]}");
+		public static global::Avro.Schema _SCHEMA = global::Avro.Schema.Parse(@"{""type"":""record"",""name"":""PullRequest"",""doc"":""Represents the state of a Pull Request."",""namespace"":""github.events"",""fields"":[{""name"":""id"",""type"":""long""},{""name"":""url"",""type"":""string""},{""name"":""title"",""type"":""string""},{""name"":""author"",""type"":""string""},{""name"":""opened_on"",""type"":{""type"":""long"",""logicalType"":""timestamp-millis""}},{""name"":""closed_on"",""default"":null,""type"":[""null"",{""type"":""long"",""logicalType"":""timestamp-millis""}]}]}");
 		private long _id;
 		private string _url;
 		private string _title;

@@ -27,7 +27,7 @@
     {
       "name": "closed_on",
       "type": ["null", { "type": "long", "logicalType": "timestamp-millis" }],
-      "default": "null"
+      "default": null
     }
   ]
 }
