@@ -53,8 +53,8 @@ namespace Example.Consumer
                             try
                             {
                                 var consumeResult = consumer.Consume(cts.Token);
-                                var pullRequestOpened = consumeResult.Message.Value;
-                                Console.WriteLine($"key: {consumeResult.Message.Key}, {pullRequestOpened.id}");
+                                var pr = consumeResult.Message.Value;
+                                Console.WriteLine($"Received Pull Request {pr.id} '{pr.title}' from {pr.author}, opened on {pr.opened_on}.");
                             }
                             catch (ConsumeException e)
                             {
