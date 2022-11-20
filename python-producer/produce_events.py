@@ -8,8 +8,7 @@ import envparse
 from confluent_kafka import Producer
 from confluent_kafka.schema_registry import SchemaRegistryClient
 from confluent_kafka.schema_registry.avro import AvroSerializer
-from confluent_kafka.serialization import (MessageField, SerializationContext,
-                                           StringSerializer)
+from confluent_kafka.serialization import MessageField, SerializationContext
 
 env = envparse.Env()
 env.read_envfile()
@@ -27,18 +26,14 @@ def main(*argv):
     with open(f"{path}/schemas/pull_request.avsc") as f:
         schema_str = f.read()
 
-    schema_registry_conf = {"url": env("SCHEMA_REGISTRY_URL")}
-    schema_registry_client = SchemaRegistryClient(schema_registry_conf)
-
+    schema_registry_client = SchemaRegistryClient({"url": env("SCHEMA_REGISTRY_URL")})
     avro_serializer = AvroSerializer(schema_registry_client, schema_str)
-    producer_conf = {"bootstrap.servers": env("BOOTSTRAP_SERVERS")}
-
-    producer = Producer(producer_conf)
+    producer = Producer({"bootstrap.servers": env("BOOTSTRAP_SERVERS")})
 
     id = 0
     while True:
         id += 1
-        logger.info("opening a pull request...")
+        logger.info(f"opening pull request {id}")
         pr = {
             "id": id,
             "url": f"https://github.com/bartsimpson/repo/pulls/{id}",
@@ -49,11 +44,9 @@ def main(*argv):
         producer.produce(
             topic=topic,
             key=str(id),
-            value=avro_serializer(
-                pr, SerializationContext(topic, MessageField.VALUE)
-            ),
+            value=avro_serializer(pr, SerializationContext(topic, MessageField.VALUE)),
         )
-        sleep(5)
+        sleep(2)
 
 
 if __name__ == "__main__":
