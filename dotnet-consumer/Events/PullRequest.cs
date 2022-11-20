@@ -14,22 +14,23 @@ namespace Events
 	using global::Avro.Specific;
 	
 	/// <summary>
-	/// The event of a pull request being opened.
+	/// Represents the state of a Pull Request.
 	/// </summary>
 	[global::System.CodeDom.Compiler.GeneratedCodeAttribute("avrogen", "1.11.1")]
-	public partial class PullRequestOpened : global::Avro.Specific.ISpecificRecord
+	public partial class PullRequest : global::Avro.Specific.ISpecificRecord
 	{
-		public static global::Avro.Schema _SCHEMA = global::Avro.Schema.Parse(@"{""type"":""record"",""name"":""PullRequestOpened"",""doc"":""The event of a pull request being opened."",""namespace"":""Events"",""fields"":[{""name"":""id"",""type"":""long""},{""name"":""url"",""type"":""string""},{""name"":""title"",""type"":""string""},{""name"":""author"",""type"":""string""},{""name"":""opened_on"",""type"":""string""}]}");
+		public static global::Avro.Schema _SCHEMA = global::Avro.Schema.Parse(@"{""type"":""record"",""name"":""PullRequest"",""doc"":""Represents the state of a Pull Request."",""namespace"":""Events"",""fields"":[{""name"":""id"",""type"":""long""},{""name"":""url"",""type"":""string""},{""name"":""title"",""type"":""string""},{""name"":""author"",""type"":""string""},{""name"":""opened_on"",""type"":{""type"":""long"",""logicalType"":""timestamp-millis""}},{""name"":""closed_on"",""default"":""null"",""type"":[""null"",{""type"":""long"",""logicalType"":""timestamp-millis""}]}]}");
 		private long _id;
 		private string _url;
 		private string _title;
 		private string _author;
-		private string _opened_on;
+		private System.DateTime _opened_on;
+		private System.Nullable<System.DateTime> _closed_on;
 		public virtual global::Avro.Schema Schema
 		{
 			get
 			{
-				return PullRequestOpened._SCHEMA;
+				return PullRequest._SCHEMA;
 			}
 		}
 		public long id
@@ -76,7 +77,7 @@ namespace Events
 				this._author = value;
 			}
 		}
-		public string opened_on
+		public System.DateTime opened_on
 		{
 			get
 			{
@@ -85,6 +86,17 @@ namespace Events
 			set
 			{
 				this._opened_on = value;
+			}
+		}
+		public System.Nullable<System.DateTime> closed_on
+		{
+			get
+			{
+				return this._closed_on;
+			}
+			set
+			{
+				this._closed_on = value;
 			}
 		}
 		public virtual object Get(int fieldPos)
@@ -96,6 +108,7 @@ namespace Events
 			case 2: return this.title;
 			case 3: return this.author;
 			case 4: return this.opened_on;
+			case 5: return this.closed_on;
 			default: throw new global::Avro.AvroRuntimeException("Bad index " + fieldPos + " in Get()");
 			};
 		}
@@ -107,7 +120,8 @@ namespace Events
 			case 1: this.url = (System.String)fieldValue; break;
 			case 2: this.title = (System.String)fieldValue; break;
 			case 3: this.author = (System.String)fieldValue; break;
-			case 4: this.opened_on = (System.String)fieldValue; break;
+			case 4: this.opened_on = (System.DateTime)fieldValue; break;
+			case 5: this.closed_on = (System.Nullable<System.DateTime>)fieldValue; break;
 			default: throw new global::Avro.AvroRuntimeException("Bad index " + fieldPos + " in Put()");
 			};
 		}
