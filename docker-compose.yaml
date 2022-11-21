@@ -52,6 +52,24 @@ services:
         "./produce_events.py"
       ]
 
+  python-consumer:
+    build: ./python-consumer
+    env_file:
+      - ./python-consumer/.env
+    depends_on:
+      - schema-registry
+    restart: always
+    volumes:
+      - ./wait-for-it.sh:/code/wait-for-it.sh
+    command:
+      [
+        "./wait-for-it.sh",
+        "schema-registry:8081",
+        "--",
+        "python3",
+        "./consume_events.py"
+      ]
+
   dotnet-consumer:
     build: ./dotnet-consumer
     env_file:
