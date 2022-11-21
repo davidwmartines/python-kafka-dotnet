@@ -28,6 +28,31 @@
       "name": "closed_on",
       "type": ["null", { "type": "long", "logicalType": "timestamp-millis" }],
       "default": null
+    },
+    {
+      "name": "comments",
+      "type": {
+        "type": "array",
+        "items": {
+          "name": "Comment",
+          "type": "record",
+          "fields": [
+            {
+              "name": "author",
+              "type": "string"
+            },
+            {
+              "name": "body",
+              "type": "string"
+            },
+            {
+              "name": "time",
+              "type": { "type": "long", "logicalType": "timestamp-millis" }
+            }
+          ]
+        }
+      },
+      "default": []
     }
   ]
 }
