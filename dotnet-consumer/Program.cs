@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Confluent.Kafka;
@@ -9,16 +8,23 @@ using Confluent.SchemaRegistry;
 using Confluent.SchemaRegistry.Serdes;
 using github.events;
 
+using CloudNative.CloudEvents.Kafka;
+using System.Collections.Generic;
+using CloudNative.CloudEvents;
+using System.Net.Mime;
+
 namespace Example.Consumer
 {
     class Program
     {
         static async Task Main(string[] args)
         {
+            const string topicName = "pullrequests";
+
             Console.WriteLine("dotnet consumer starting up");
 
             Console.WriteLine("Ensuring topics exist in Kafka");
-            await EnsureTopics();
+            await EnsureTopic(topicName);
 
             var consumerConfig = new ConsumerConfig
             {
@@ -34,16 +40,16 @@ namespace Example.Consumer
 
             await Task.Run(() =>
             {
-                using (var schemaRegistry = new CachedSchemaRegistryClient(schemaRegistryConfig))
+                using (var schemaRegistryClient = new CachedSchemaRegistryClient(schemaRegistryConfig))
                 using (var consumer =
-                    new ConsumerBuilder<string, PullRequest>(consumerConfig)
-                        .SetValueDeserializer(new AvroDeserializer<PullRequest>(schemaRegistry).AsSyncOverAsync())
+                    new ConsumerBuilder<string?, byte[]>(consumerConfig)
                         .SetErrorHandler((_, e) => Console.WriteLine($"Error: {e.Reason}"))
                         .Build())
                 {
-                    Console.WriteLine("Subscribing to topic");
+                    var cloudEventFormatter = new AvroSchemaRegistryCloudEventFormatter<PullRequest>(schemaRegistryClient, topicName);
 
-                    consumer.Subscribe("pullrequests");
+                    Console.WriteLine("Subscribing to topic");
+                    consumer.Subscribe(topicName);
 
                     Console.WriteLine("Starting consume loop");
                     try
@@ -53,15 +59,12 @@ namespace Example.Consumer
                             try
                             {
                                 var consumeResult = consumer.Consume(cts.Token);
-
-                                var eventType = "";
-                                if (consumeResult.Message.Headers.TryGetLastBytes("ce_type", out var bytes))
+                                var cloudEvent = consumeResult.Message.ToCloudEvent(cloudEventFormatter);
+                                if (cloudEvent.Data != null)
                                 {
-                                    eventType = Encoding.UTF8.GetString(bytes);
+                                    var pr = (PullRequest)cloudEvent.Data;
+                                    Console.WriteLine($"Received {cloudEvent.Type}  {pr.id} '{pr.title}' from {pr.author}, opened on {pr.opened_on}.");
                                 }
-
-                                var pr = consumeResult.Message.Value;
-                                Console.WriteLine($"Received {eventType}  {pr.id} '{pr.title}' from {pr.author}, opened on {pr.opened_on}.");
                             }
                             catch (ConsumeException e)
                             {
@@ -80,14 +83,14 @@ namespace Example.Consumer
             cts.Cancel();
         }
 
-        private static async Task EnsureTopics()
+        private static async Task EnsureTopic(string topicName)
         {
             using (var adminClient = new AdminClientBuilder(new AdminClientConfig { BootstrapServers = Environment.GetEnvironmentVariable("BOOTSTRAP_SERVERS") }).Build())
             {
                 try
                 {
                     await adminClient.CreateTopicsAsync(new TopicSpecification[] {
-                        new TopicSpecification { Name = "pullrequests", ReplicationFactor = 1, NumPartitions = 1 } });
+                        new TopicSpecification { Name = topicName, ReplicationFactor = 1, NumPartitions = 1 } });
                 }
                 catch (CreateTopicsException e)
                 {
@@ -96,5 +99,47 @@ namespace Example.Consumer
             }
         }
 
+    }
+
+    class AvroSchemaRegistryCloudEventFormatter<T> : CloudEventFormatter
+    {
+        private readonly IDeserializer<T> deserializer;
+        private readonly string topic;
+
+        public AvroSchemaRegistryCloudEventFormatter(ISchemaRegistryClient schemaRegistryClient, string topic)
+        {
+            this.topic = topic;
+            this.deserializer = new AvroDeserializer<T>(schemaRegistryClient).AsSyncOverAsync();
+        }
+
+        public override IReadOnlyList<CloudEvent> DecodeBatchModeMessage(ReadOnlyMemory<byte> body, ContentType? contentType, IEnumerable<CloudEventAttribute>? extensionAttributes)
+        {
+            throw new NotImplementedException();
+        }
+
+        public override void DecodeBinaryModeEventData(ReadOnlyMemory<byte> body, CloudEvent cloudEvent)
+        {
+            cloudEvent.Data = this.deserializer.Deserialize(body.Span, false, new SerializationContext(MessageComponentType.Value, topic));
+        }
+
+        public override CloudEvent DecodeStructuredModeMessage(ReadOnlyMemory<byte> body, ContentType? contentType, IEnumerable<CloudEventAttribute>? extensionAttributes)
+        {
+            throw new NotImplementedException();
+        }
+
+        public override ReadOnlyMemory<byte> EncodeBatchModeMessage(IEnumerable<CloudEvent> cloudEvents, out ContentType contentType)
+        {
+            throw new NotImplementedException();
+        }
+
+        public override ReadOnlyMemory<byte> EncodeBinaryModeEventData(CloudEvent cloudEvent)
+        {
+            throw new NotImplementedException();
+        }
+
+        public override ReadOnlyMemory<byte> EncodeStructuredModeMessage(CloudEvent cloudEvent, out ContentType contentType)
+        {
+            throw new NotImplementedException();
+        }
     }
 }
