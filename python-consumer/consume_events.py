@@ -4,11 +4,13 @@ import sys
 import typing
 
 import envparse
+import fastavro_gen
 from cloudevents.kafka import KafkaMessage, from_binary
 from confluent_kafka import Consumer, Message
 from confluent_kafka.schema_registry import SchemaRegistryClient
 from confluent_kafka.schema_registry.avro import AvroDeserializer
 from confluent_kafka.serialization import MessageField, SerializationContext
+from github.events.pull_request import PullRequest
 
 
 def get_headers(message: Message) -> typing.Dict[str, bytes]:
@@ -31,7 +33,11 @@ def main(*argv):
     with open(f"{path}/schemas/pull_request.avsc") as f:
         schema_str = f.read()
     schema_registry_client = SchemaRegistryClient({"url": env("SCHEMA_REGISTRY_URL")})
-    avro_deserializer = AvroDeserializer(schema_registry_client, schema_str)
+    avro_deserializer = AvroDeserializer(
+        schema_registry_client,
+        schema_str,
+        from_dict=lambda d, _: fastavro_gen.fromdict(PullRequest, d),
+    )
 
     consumer = Consumer(
         {
@@ -63,7 +69,7 @@ def main(*argv):
             )
             pr = event.data
             logger.info(
-                f"Received {event['type']} event for pull request {pr['id']}, {pr['title']}.  Status {pr['status']}"
+                f"Received {event['type']} event for pull request {pr.id}, {pr.title}.  Status {pr.status}"
             )
 
 

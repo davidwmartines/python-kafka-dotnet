@@ -5,15 +5,15 @@ from datetime import datetime
 from time import sleep
 
 import envparse
+import fastavro_gen
+from cloudevents.http import CloudEvent
+from cloudevents.kafka import to_binary
 from confluent_kafka import Producer
 from confluent_kafka.schema_registry import SchemaRegistryClient
 from confluent_kafka.schema_registry.avro import AvroSerializer
 from confluent_kafka.serialization import MessageField, SerializationContext
-
-from cloudevents.kafka import to_binary
-from cloudevents.http import CloudEvent
-
 from faker import Faker
+from github.events.pull_request import PullRequest
 
 
 def main(*argv):
@@ -33,20 +33,23 @@ def main(*argv):
         schema_str = f.read()
 
     schema_registry_client = SchemaRegistryClient({"url": env("SCHEMA_REGISTRY_URL")})
-    avro_serializer = AvroSerializer(schema_registry_client, schema_str)
+    avro_serializer = AvroSerializer(
+        schema_registry_client, schema_str, to_dict=lambda d, _: fastavro_gen.asdict(d)
+    )
     producer = Producer({"bootstrap.servers": env("BOOTSTRAP_SERVERS")})
 
     while True:
 
         pull_request_id = fake.pyint()
-        pull_request = {
-            "id": pull_request_id,
-            "url": f"https://github.com/our-org/our-repo/pulls/{id}",
-            "author": fake.profile()["username"],
-            "title": fake.sentence(5),
-            "opened_on": datetime.utcnow(),
-            "status": "OPEN",
-        }
+
+        pull_request = PullRequest(
+            pull_request_id,
+            url=f"https://github.com/our-org/our-repo/pulls/{pull_request_id}",
+            author=fake.profile()["username"],
+            title=fake.sentence(5),
+            opened_on=datetime.utcnow(),
+            status="OPEN",
+        )
         event = CloudEvent.create(
             {
                 "type": "pullrequest_created",
@@ -66,7 +69,7 @@ def main(*argv):
             topic=topic, key=message.key, headers=message.headers, value=message.value
         )
         logger.info(
-            f"Opened pull request {pull_request['id']} \"{pull_request['title']}\", by {pull_request['author']}, on {pull_request['opened_on']}."
+            f'Opened pull request {pull_request.id} "{pull_request.title}", by {pull_request.author}, on {pull_request.opened_on}.'
         )
         sleep(2)
 
