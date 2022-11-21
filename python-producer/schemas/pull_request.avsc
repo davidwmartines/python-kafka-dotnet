@@ -30,6 +30,18 @@
       "default": null
     },
     {
+      "name": "status",
+      "type": [
+        "null",
+        {
+          "type": "enum",
+          "name": "Status",
+          "symbols": ["OPEN", "APPROVED", "CLOSED"]
+        }
+      ],
+      "default": null
+    },
+    {
       "name": "comments",
       "type": {
         "type": "array",

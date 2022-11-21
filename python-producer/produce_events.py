@@ -45,6 +45,7 @@ def main(*argv):
             "author": fake.profile()["username"],
             "title": fake.sentence(5),
             "opened_on": datetime.utcnow(),
+            "status": "OPEN",
         }
         event = CloudEvent.create(
             {

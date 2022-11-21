@@ -19,7 +19,7 @@ namespace github.events
 	[global::System.CodeDom.Compiler.GeneratedCodeAttribute("avrogen", "1.11.1")]
 	public partial class PullRequest : global::Avro.Specific.ISpecificRecord
 	{
-		public static global::Avro.Schema _SCHEMA = global::Avro.Schema.Parse(@"{""type"":""record"",""name"":""PullRequest"",""doc"":""Represents the state of a Pull Request."",""namespace"":""github.events"",""fields"":[{""name"":""id"",""type"":""long""},{""name"":""url"",""type"":""string""},{""name"":""title"",""type"":""string""},{""name"":""author"",""type"":""string""},{""name"":""opened_on"",""type"":{""type"":""long"",""logicalType"":""timestamp-millis""}},{""name"":""closed_on"",""default"":null,""type"":[""null"",{""type"":""long"",""logicalType"":""timestamp-millis""}]},{""name"":""status"",""default"":null,""type"":[""null"",{""type"":""enum"",""name"":""Status"",""namespace"":""github.events"",""symbols"":[""OPEN"",""APPROVED"",""CLOSED""]}]}]}");
+		public static global::Avro.Schema _SCHEMA = global::Avro.Schema.Parse(@"{""type"":""record"",""name"":""PullRequest"",""doc"":""Represents the state of a Pull Request."",""namespace"":""github.events"",""fields"":[{""name"":""id"",""type"":""long""},{""name"":""url"",""type"":""string""},{""name"":""title"",""type"":""string""},{""name"":""author"",""type"":""string""},{""name"":""opened_on"",""type"":{""type"":""long"",""logicalType"":""timestamp-millis""}},{""name"":""closed_on"",""default"":null,""type"":[""null"",{""type"":""long"",""logicalType"":""timestamp-millis""}]},{""name"":""status"",""default"":null,""type"":[""null"",{""type"":""enum"",""name"":""Status"",""namespace"":""github.events"",""symbols"":[""OPEN"",""APPROVED"",""CLOSED""]}]},{""name"":""comments"",""default"":[],""type"":{""type"":""array"",""items"":{""type"":""record"",""name"":""Comment"",""namespace"":""github.events"",""fields"":[{""name"":""author"",""type"":""string""},{""name"":""body"",""type"":""string""},{""name"":""time"",""type"":{""type"":""long"",""logicalType"":""timestamp-millis""}}]}}}]}");
 		private long _id;
 		private string _url;
 		private string _title;
@@ -27,6 +27,7 @@ namespace github.events
 		private System.DateTime _opened_on;
 		private System.Nullable<System.DateTime> _closed_on;
 		private System.Nullable<github.events.Status> _status;
+		private IList<github.events.Comment> _comments;
 		public virtual global::Avro.Schema Schema
 		{
 			get
@@ -111,6 +112,17 @@ namespace github.events
 				this._status = value;
 			}
 		}
+		public IList<github.events.Comment> comments
+		{
+			get
+			{
+				return this._comments;
+			}
+			set
+			{
+				this._comments = value;
+			}
+		}
 		public virtual object Get(int fieldPos)
 		{
 			switch (fieldPos)
@@ -122,6 +134,7 @@ namespace github.events
 			case 4: return this.opened_on;
 			case 5: return this.closed_on;
 			case 6: return this.status;
+			case 7: return this.comments;
 			default: throw new global::Avro.AvroRuntimeException("Bad index " + fieldPos + " in Get()");
 			};
 		}
@@ -136,6 +149,7 @@ namespace github.events
 			case 4: this.opened_on = (System.DateTime)fieldValue; break;
 			case 5: this.closed_on = (System.Nullable<System.DateTime>)fieldValue; break;
 			case 6: this.status = fieldValue == null ? (System.Nullable<github.events.Status>)null : (github.events.Status)fieldValue; break;
+			case 7: this.comments = (IList<github.events.Comment>)fieldValue; break;
 			default: throw new global::Avro.AvroRuntimeException("Bad index " + fieldPos + " in Put()");
 			};
 		}

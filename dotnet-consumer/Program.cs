@@ -54,10 +54,7 @@ namespace Example.Consumer
 
             Console.WriteLine("Ensuring topics exist in Kafka");
             await EnsureTopic(topicName);
-
-
-
-
+            
             CancellationTokenSource cts = new CancellationTokenSource();
 
             await Task.Run(async () =>
@@ -119,9 +116,16 @@ namespace Example.Consumer
 
         private static async Task ReviewPullRequest(PullRequest pr)
         {
-            //set pr status, etc...
+            if (pr.id % 2 == 0)
+            {
+                pr.comments.Add(new Comment { author = "dotnet-consumer", body = "LGTM!", time = DateTime.UtcNow });
+                pr.status = Status.APPROVED;
+            }
+            else
+            {
+                pr.comments.Add(new Comment { author = "dotnet-consumer", body = "Please address these issues.", time = DateTime.UtcNow });
+            }
 
-            // send reviewed event.
             var ce = new CloudEvent()
             {
                 Id = Guid.NewGuid().ToString(),
