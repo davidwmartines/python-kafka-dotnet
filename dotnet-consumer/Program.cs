@@ -130,6 +130,7 @@ namespace Example.Consumer
             {
                 Id = Guid.NewGuid().ToString(),
                 Type = "pullrequest_reviewed",
+                Time = DateTime.UtcNow,
                 Source = new Uri("producer://dotnet-consumer"),
                 Data = pr
             };
