@@ -41,6 +41,16 @@ services:
     depends_on:
       - schema-registry
     restart: always
+    volumes:
+      - ./wait-for-it.sh:/code/wait-for-it.sh
+    command:
+      [
+        "./wait-for-it.sh",
+        "schema-registry:8081",
+        "--",
+        "python3",
+        "./produce_events.py"
+      ]
 
   dotnet-consumer:
     build: ./dotnet-consumer
@@ -49,3 +59,13 @@ services:
     depends_on:
       - schema-registry
     restart: always
+    volumes:
+      - ./wait-for-it.sh:/App/wait-for-it.sh
+    command:
+      [
+        "./wait-for-it.sh",
+        "schema-registry:8081",
+        "--",
+        "dotnet",
+        "dotnet-consumer.dll"
+      ]
