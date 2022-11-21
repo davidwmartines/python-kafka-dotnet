@@ -17,28 +17,40 @@ namespace Example.Consumer
 {
     class Program
     {
+        const string topicName = "pullrequests";
+        private static readonly ConsumerConfig consumerConfig = new ConsumerConfig
+        {
+            BootstrapServers = Environment.GetEnvironmentVariable("BOOTSTRAP_SERVERS"),
+            GroupId = Environment.GetEnvironmentVariable("CONSUMER_GROUP_ID")
+        };
+        private static readonly SchemaRegistryConfig schemaRegistryConfig = new SchemaRegistryConfig
+        {
+            Url = Environment.GetEnvironmentVariable("SCHEMA_REGISTRY_URL")
+        };
+        private static readonly ProducerConfig producerConfig = new ProducerConfig
+        {
+            BootstrapServers = Environment.GetEnvironmentVariable("BOOTSTRAP_SERVERS")
+        };
+
+        private static readonly AdminClientConfig adminClientConfig = new AdminClientConfig
+        {
+            BootstrapServers = Environment.GetEnvironmentVariable("BOOTSTRAP_SERVERS")
+        };
+
+
         static async Task Main(string[] args)
         {
-            const string topicName = "pullrequests";
 
             Console.WriteLine("dotnet consumer starting up");
 
             Console.WriteLine("Ensuring topics exist in Kafka");
             await EnsureTopic(topicName);
 
-            var consumerConfig = new ConsumerConfig
-            {
-                BootstrapServers = Environment.GetEnvironmentVariable("BOOTSTRAP_SERVERS"),
-                GroupId = Environment.GetEnvironmentVariable("CONSUMER_GROUP_ID")
-            };
-            var schemaRegistryConfig = new SchemaRegistryConfig
-            {
-                Url = Environment.GetEnvironmentVariable("SCHEMA_REGISTRY_URL")
-            };
+
 
             CancellationTokenSource cts = new CancellationTokenSource();
 
-            await Task.Run(() =>
+            await Task.Run(async () =>
             {
                 using (var schemaRegistryClient = new CachedSchemaRegistryClient(schemaRegistryConfig))
                 using (var consumer =
@@ -58,12 +70,27 @@ namespace Example.Consumer
                         {
                             try
                             {
-                                var consumeResult = consumer.Consume(cts.Token);
+                                var consumeResult = consumer.Consume(1000);
+                                if (consumeResult == null)
+                                {
+                                    continue;
+                                }
                                 var cloudEvent = consumeResult.Message.ToCloudEvent(cloudEventFormatter);
                                 if (cloudEvent.Data != null)
                                 {
                                     var pr = (PullRequest)cloudEvent.Data;
-                                    Console.WriteLine($"Received {cloudEvent.Type}  {pr.id} '{pr.title}' from {pr.author}, opened on {pr.opened_on}.");
+                                    Console.WriteLine($"Received {cloudEvent.Type} event for Pull Request {pr.id} '{pr.title}', by {pr.author}, opened on {pr.opened_on}.");
+
+                                    switch (cloudEvent.Type)
+                                    {
+                                        case "pullrequest_created":
+                                            await ReviewPullRequest(pr);
+                                            break;
+
+                                        default:
+                                            break;
+                                    }
+
                                 }
                             }
                             catch (ConsumeException e)
@@ -83,9 +110,43 @@ namespace Example.Consumer
             cts.Cancel();
         }
 
+        private static async Task ReviewPullRequest(PullRequest pr)
+        {
+            //set pr status, etc...
+
+            // send reviewed event.
+            var ce = new CloudEvent()
+            {
+                Id = Guid.NewGuid().ToString(),
+                Type = "pullrequest_reviewed",
+                Source = new Uri("producer://dotnet-consumer"),
+                Data = pr
+            };
+            ce["partitionkey"] = pr.id.ToString();
+
+            using (var schemaRegistryClient = new CachedSchemaRegistryClient(schemaRegistryConfig))
+            using (var producer = new ProducerBuilder<string, byte[]>(producerConfig).Build())
+            {
+                var cloudEventFormatter = new AvroSchemaRegistryCloudEventFormatter<PullRequest>(schemaRegistryClient, topicName);
+                var message = ce.ToKafkaMessage(ContentMode.Binary, cloudEventFormatter) as Message<string, byte[]>;
+                await producer
+                    .ProduceAsync(topicName, message)
+                    .ContinueWith(task =>
+                        {
+                            if (!task.IsFaulted)
+                            {
+                                Console.WriteLine($"produced to: {task.Result.TopicPartitionOffset}");
+                                return;
+                            }
+                            Console.WriteLine($"error producing message: {task.Exception?.InnerException}");
+                        });
+                producer.Flush();
+            }
+        }
+
         private static async Task EnsureTopic(string topicName)
         {
-            using (var adminClient = new AdminClientBuilder(new AdminClientConfig { BootstrapServers = Environment.GetEnvironmentVariable("BOOTSTRAP_SERVERS") }).Build())
+            using (var adminClient = new AdminClientBuilder(adminClientConfig).Build())
             {
                 try
                 {
@@ -104,12 +165,14 @@ namespace Example.Consumer
     class AvroSchemaRegistryCloudEventFormatter<T> : CloudEventFormatter
     {
         private readonly IDeserializer<T> deserializer;
+        private readonly ISerializer<T> serializer;
         private readonly string topic;
 
         public AvroSchemaRegistryCloudEventFormatter(ISchemaRegistryClient schemaRegistryClient, string topic)
         {
             this.topic = topic;
             this.deserializer = new AvroDeserializer<T>(schemaRegistryClient).AsSyncOverAsync();
+            this.serializer = new AvroSerializer<T>(schemaRegistryClient).AsSyncOverAsync();
         }
 
         public override IReadOnlyList<CloudEvent> DecodeBatchModeMessage(ReadOnlyMemory<byte> body, ContentType? contentType, IEnumerable<CloudEventAttribute>? extensionAttributes)
@@ -134,12 +197,21 @@ namespace Example.Consumer
 
         public override ReadOnlyMemory<byte> EncodeBinaryModeEventData(CloudEvent cloudEvent)
         {
-            throw new NotImplementedException();
+            if (cloudEvent.Data != null && cloudEvent.Data is T)
+            {
+                return this.serializer.Serialize((T)cloudEvent.Data, new SerializationContext(MessageComponentType.Value, topic));
+            }
+            return null;
         }
 
         public override ReadOnlyMemory<byte> EncodeStructuredModeMessage(CloudEvent cloudEvent, out ContentType contentType)
         {
             throw new NotImplementedException();
+        }
+
+        protected override string? InferDataContentType(object data)
+        {
+            return "application/avro";
         }
     }
 }
