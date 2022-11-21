@@ -3,3 +3,15 @@ gen_classes:
     cd ./dotnet-consumer && \
         avrogen -s ./schemas/pull_request.avsc . && \
     cd ..
+
+# build the docker containers
+build:
+    docker-compose build
+
+# start up
+start:
+    docker-compose up
+
+# kill
+terminate:
+    docker-compose down
