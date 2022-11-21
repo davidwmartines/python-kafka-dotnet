@@ -37,6 +37,15 @@ namespace Example.Consumer
             BootstrapServers = Environment.GetEnvironmentVariable("BOOTSTRAP_SERVERS")
         };
 
+        private static readonly ISchemaRegistryClient schemaRegistryClient;
+        private static readonly CloudEventFormatter cloudEventFormatter;
+
+        static Program()
+        {
+            schemaRegistryClient = new CachedSchemaRegistryClient(schemaRegistryConfig);
+            cloudEventFormatter = new AvroSchemaRegistryCloudEventFormatter<PullRequest>(schemaRegistryClient, topicName);
+        }
+
 
         static async Task Main(string[] args)
         {
@@ -48,18 +57,16 @@ namespace Example.Consumer
 
 
 
+
             CancellationTokenSource cts = new CancellationTokenSource();
 
             await Task.Run(async () =>
             {
-                using (var schemaRegistryClient = new CachedSchemaRegistryClient(schemaRegistryConfig))
                 using (var consumer =
                     new ConsumerBuilder<string?, byte[]>(consumerConfig)
                         .SetErrorHandler((_, e) => Console.WriteLine($"Error: {e.Reason}"))
                         .Build())
                 {
-                    var cloudEventFormatter = new AvroSchemaRegistryCloudEventFormatter<PullRequest>(schemaRegistryClient, topicName);
-
                     Console.WriteLine("Subscribing to topic");
                     consumer.Subscribe(topicName);
 
@@ -70,7 +77,7 @@ namespace Example.Consumer
                         {
                             try
                             {
-                                var consumeResult = consumer.Consume(1000);
+                                var consumeResult = consumer.Consume(cts.Token);
                                 if (consumeResult == null)
                                 {
                                     continue;
@@ -79,7 +86,7 @@ namespace Example.Consumer
                                 if (cloudEvent.Data != null)
                                 {
                                     var pr = (PullRequest)cloudEvent.Data;
-                                    Console.WriteLine($"Received {cloudEvent.Type} event for Pull Request {pr.id} '{pr.title}', by {pr.author}, opened on {pr.opened_on}.");
+                                    Console.WriteLine($"Received {cloudEvent.Type} event for Pull Request {pr.id} '{pr.title}', by {pr.author}, opened on {pr.opened_on}.  Status: {pr.status?.ToString() ?? ""}");
 
                                     switch (cloudEvent.Type)
                                     {
@@ -124,10 +131,8 @@ namespace Example.Consumer
             };
             ce["partitionkey"] = pr.id.ToString();
 
-            using (var schemaRegistryClient = new CachedSchemaRegistryClient(schemaRegistryConfig))
             using (var producer = new ProducerBuilder<string, byte[]>(producerConfig).Build())
             {
-                var cloudEventFormatter = new AvroSchemaRegistryCloudEventFormatter<PullRequest>(schemaRegistryClient, topicName);
                 var message = ce.ToKafkaMessage(ContentMode.Binary, cloudEventFormatter) as Message<string, byte[]>;
                 await producer
                     .ProduceAsync(topicName, message)

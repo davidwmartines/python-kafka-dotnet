@@ -19,13 +19,14 @@ namespace github.events
 	[global::System.CodeDom.Compiler.GeneratedCodeAttribute("avrogen", "1.11.1")]
 	public partial class PullRequest : global::Avro.Specific.ISpecificRecord
 	{
-		public static global::Avro.Schema _SCHEMA = global::Avro.Schema.Parse(@"{""type"":""record"",""name"":""PullRequest"",""doc"":""Represents the state of a Pull Request."",""namespace"":""github.events"",""fields"":[{""name"":""id"",""type"":""long""},{""name"":""url"",""type"":""string""},{""name"":""title"",""type"":""string""},{""name"":""author"",""type"":""string""},{""name"":""opened_on"",""type"":{""type"":""long"",""logicalType"":""timestamp-millis""}},{""name"":""closed_on"",""default"":null,""type"":[""null"",{""type"":""long"",""logicalType"":""timestamp-millis""}]}]}");
+		public static global::Avro.Schema _SCHEMA = global::Avro.Schema.Parse(@"{""type"":""record"",""name"":""PullRequest"",""doc"":""Represents the state of a Pull Request."",""namespace"":""github.events"",""fields"":[{""name"":""id"",""type"":""long""},{""name"":""url"",""type"":""string""},{""name"":""title"",""type"":""string""},{""name"":""author"",""type"":""string""},{""name"":""opened_on"",""type"":{""type"":""long"",""logicalType"":""timestamp-millis""}},{""name"":""closed_on"",""default"":null,""type"":[""null"",{""type"":""long"",""logicalType"":""timestamp-millis""}]},{""name"":""status"",""default"":null,""type"":[""null"",{""type"":""enum"",""name"":""Status"",""namespace"":""github.events"",""symbols"":[""OPEN"",""APPROVED"",""CLOSED""]}]}]}");
 		private long _id;
 		private string _url;
 		private string _title;
 		private string _author;
 		private System.DateTime _opened_on;
 		private System.Nullable<System.DateTime> _closed_on;
+		private System.Nullable<github.events.Status> _status;
 		public virtual global::Avro.Schema Schema
 		{
 			get
@@ -99,6 +100,17 @@ namespace github.events
 				this._closed_on = value;
 			}
 		}
+		public System.Nullable<github.events.Status> status
+		{
+			get
+			{
+				return this._status;
+			}
+			set
+			{
+				this._status = value;
+			}
+		}
 		public virtual object Get(int fieldPos)
 		{
 			switch (fieldPos)
@@ -109,6 +121,7 @@ namespace github.events
 			case 3: return this.author;
 			case 4: return this.opened_on;
 			case 5: return this.closed_on;
+			case 6: return this.status;
 			default: throw new global::Avro.AvroRuntimeException("Bad index " + fieldPos + " in Get()");
 			};
 		}
@@ -122,6 +135,7 @@ namespace github.events
 			case 3: this.author = (System.String)fieldValue; break;
 			case 4: this.opened_on = (System.DateTime)fieldValue; break;
 			case 5: this.closed_on = (System.Nullable<System.DateTime>)fieldValue; break;
+			case 6: this.status = fieldValue == null ? (System.Nullable<github.events.Status>)null : (github.events.Status)fieldValue; break;
 			default: throw new global::Avro.AvroRuntimeException("Bad index " + fieldPos + " in Put()");
 			};
 		}

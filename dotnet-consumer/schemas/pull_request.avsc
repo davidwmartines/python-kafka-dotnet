@@ -28,6 +28,18 @@
       "name": "closed_on",
       "type": ["null", { "type": "long", "logicalType": "timestamp-millis" }],
       "default": null
+    },
+    {
+      "name": "status",
+      "type": [
+        "null",
+        {
+          "type": "enum",
+          "name": "Status",
+          "symbols": ["OPEN", "APPROVED", "CLOSED"]
+        }
+      ],
+      "default": null
     }
   ]
 }
