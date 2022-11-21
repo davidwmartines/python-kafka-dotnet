@@ -54,7 +54,7 @@ namespace Example.Consumer
 
             Console.WriteLine("Ensuring topics exist in Kafka");
             await EnsureTopic(topicName);
-            
+
             CancellationTokenSource cts = new CancellationTokenSource();
 
             await Task.Run(async () =>
@@ -89,6 +89,15 @@ namespace Example.Consumer
                                     {
                                         case "pullrequest_created":
                                             await ReviewPullRequest(pr);
+                                            break;
+
+                                        case "pullrequest_closed":
+                                            Console.WriteLine($"Pull Request {pr.id} closed on {pr.closed_on}.");
+                                            Console.WriteLine($"Pull Request {pr.id} comments:");
+                                            foreach (var comment in pr.comments)
+                                            {
+                                                Console.WriteLine($"    '{comment.body}', {comment.author} ({comment.time})");
+                                            }
                                             break;
 
                                         default:

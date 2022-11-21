@@ -2,14 +2,17 @@ import logging
 import os
 import sys
 import typing
+from datetime import datetime
 
 import envparse
 import fastavro_gen
-from cloudevents.kafka import KafkaMessage, from_binary
-from confluent_kafka import Consumer, Message
+from cloudevents.http import CloudEvent
+from cloudevents.kafka import KafkaMessage, from_binary, to_binary
+from confluent_kafka import Consumer, Message, Producer
 from confluent_kafka.schema_registry import SchemaRegistryClient
-from confluent_kafka.schema_registry.avro import AvroDeserializer
+from confluent_kafka.schema_registry.avro import AvroDeserializer, AvroSerializer
 from confluent_kafka.serialization import MessageField, SerializationContext
+from github.events.comment import Comment
 from github.events.pull_request import PullRequest
 
 
@@ -38,6 +41,10 @@ def main(*argv):
         schema_str,
         from_dict=lambda d, _: fastavro_gen.fromdict(PullRequest, d),
     )
+    avro_serializer = AvroSerializer(
+        schema_registry_client, schema_str, to_dict=lambda d, _: fastavro_gen.asdict(d)
+    )
+    producer = Producer({"bootstrap.servers": env("BOOTSTRAP_SERVERS")})
 
     consumer = Consumer(
         {
@@ -71,6 +78,40 @@ def main(*argv):
             logger.info(
                 f"Received {event['type']} event for pull request {pr.id}, {pr.title}.  Status {pr.status}"
             )
+
+            if event["type"] != "pullrequest_reviewed":
+                continue
+
+            if pr.status == "APPROVED":
+                pr.status = "CLOSED"
+                pr.closed_on = datetime.utcnow()
+                pr.comments.append(
+                    Comment(author=pr.author, body="Thanks!", time=datetime.utcnow())
+                )
+
+                outgoing_event = CloudEvent.create(
+                    {
+                        "type": "pullrequest_closed",
+                        "source": "python-producer",
+                        "partitionkey": str(pr.id),
+                        "content-type": "application/avro",
+                    },
+                    data=pr,
+                )
+
+                message = to_binary(
+                    outgoing_event,
+                    data_marshaller=lambda e: avro_serializer(
+                        e, SerializationContext(topic, MessageField.VALUE)
+                    ),
+                )
+                producer.produce(
+                    topic=topic,
+                    key=message.key,
+                    headers=message.headers,
+                    value=message.value,
+                )
+                producer.flush()
 
 
 if __name__ == "__main__":

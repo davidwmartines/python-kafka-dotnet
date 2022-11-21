@@ -68,6 +68,7 @@ def main(*argv):
         producer.produce(
             topic=topic, key=message.key, headers=message.headers, value=message.value
         )
+        producer.flush()
         logger.info(
             f'Opened pull request {pull_request.id} "{pull_request.title}", by {pull_request.author}, on {pull_request.opened_on}.'
         )
