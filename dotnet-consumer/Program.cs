@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Confluent.Kafka;
@@ -7,7 +8,6 @@ using Confluent.Kafka.SyncOverAsync;
 using Confluent.SchemaRegistry;
 using Confluent.SchemaRegistry.Serdes;
 using github.events;
-
 
 namespace Example.Consumer
 {
@@ -53,8 +53,15 @@ namespace Example.Consumer
                             try
                             {
                                 var consumeResult = consumer.Consume(cts.Token);
+
+                                var eventType = "";
+                                if (consumeResult.Message.Headers.TryGetLastBytes("ce_type", out var bytes))
+                                {
+                                    eventType = Encoding.UTF8.GetString(bytes);
+                                }
+
                                 var pr = consumeResult.Message.Value;
-                                Console.WriteLine($"Received Pull Request {pr.id} '{pr.title}' from {pr.author}, opened on {pr.opened_on}.");
+                                Console.WriteLine($"Received {eventType}  {pr.id} '{pr.title}' from {pr.author}, opened on {pr.opened_on}.");
                             }
                             catch (ConsumeException e)
                             {
