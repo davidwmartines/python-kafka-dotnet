@@ -1,89 +1,85 @@
-version: '3.7'
-
 services:
 
   zookeeper:
     image: bitnami/zookeeper:3.7.0
+    hostname: zookeeper
+    container_name: zookeeper
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
       ZOOKEEPER_TICK_TIME: 2000
       ALLOW_ANONYMOUS_LOGIN: 'yes'
     ports:
       - 22181:2181
+    healthcheck:
+      test: echo srvr | nc zookeeper 2181 || exit 1
+      interval: 5s
+      retries: 20
 
   kafka:
     image: bitnami/kafka:3.3.1
+    hostname: kafka
+    container_name: kafka
     depends_on:
-      - zookeeper
+      zookeeper:
+        condition: service_healthy
     ports:
       - 29092:29092
     environment:
       ALLOW_PLAINTEXT_LISTENER: 'yes'
       KAFKA_CFG_ZOOKEEPER_CONNECT: zookeeper:2181
+    healthcheck:
+      test: kafka-topics.sh --list --bootstrap-server kafka:9092
+      interval: 5s
+      retries: 20
 
   schema-registry:
     image: confluentinc/cp-schema-registry:6.2.0
     hostname: schema-registry
+    container_name: schema-registry
     depends_on:
-      - kafka
+      kafka:
+        condition: service_healthy
     ports:
       - "8081:8081"
     environment:
       SCHEMA_REGISTRY_HOST_NAME: schema-registry
       SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS: 'kafka:9092'
       SCHEMA_REGISTRY_LISTENERS: http://0.0.0.0:8081
-      SCHEMA_REGISTRY_SCHEMA_COMPATIBILITY_LEVEL: full
+      SCHEMA_REGISTRY_SCHEMA_COMPATIBILITY_LEVEL: forward
+    healthcheck:
+      test: curl --write-out 'HTTP %{http_code}' --fail --silent --output /dev/null http://localhost:8081
+      interval: 5s
+      retries: 20
 
   python-producer:
     build: ./python-producer
+    container_name: python-producer
     env_file:
       - ./python-producer/.env
     depends_on:
-      - schema-registry
+      schema-registry:
+        condition: service_healthy
     restart: always
-    volumes:
-      - ./wait-for-it.sh:/code/wait-for-it.sh
-    command:
-      [
-        "./wait-for-it.sh",
-        "schema-registry:8081",
-        "--",
-        "python3",
-        "./produce_events.py"
-      ]
+    command: [ "python3", "./produce_events.py" ]
 
   python-consumer:
     build: ./python-consumer
+    container_name: python-consumer
     env_file:
       - ./python-consumer/.env
     depends_on:
-      - schema-registry
+      schema-registry:
+        condition: service_healthy
     restart: always
-    volumes:
-      - ./wait-for-it.sh:/code/wait-for-it.sh
-    command:
-      [
-        "./wait-for-it.sh",
-        "schema-registry:8081",
-        "--",
-        "python3",
-        "./consume_events.py"
-      ]
+    command: [ "python3", "./consume_events.py" ]
 
   dotnet-consumer:
     build: ./dotnet-consumer
+    container_name: dotnet-consumer
     env_file:
       - ./dotnet-consumer/.env
     depends_on:
-      - schema-registry
+      schema-registry:
+        condition: service_healthy
     restart: always
-    volumes:
-      - ./wait-for-it.sh:/App/wait-for-it.sh
-    command:
-      [
-        "./wait-for-it.sh",
-        "schema-registry:8081",
-        "--",
-        "dotnet",
-        "dotnet-consumer.dll"
-      ]
+    command: [ "dotnet", "dotnet-consumer.dll" ]
